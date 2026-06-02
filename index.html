@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice Generator — Afrensics</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --paper: #f7f5f0;
+    --cream: #edeae2;
+    --accent: #1a3a5c;
+    --green: #16a34a;
+    --red: #dc2626;
+    --gold: #b8920a;
+    --mono: 'DM Mono', monospace;
+    --display: 'Syne', sans-serif;
+    --body: 'DM Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    min-height: 100vh;
+  }
+
+  /* ── LAYOUT ── */
+  .app {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow-y: auto;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+
+  .logo {
+    font-family: var(--display);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 32px;
+  }
+
+  .logo span { color: var(--paper); }
+
+  .sidebar h2 {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 28px;
+    line-height: 1.2;
+  }
+
+  .section {
+    margin-bottom: 28px;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #222;
+  }
+
+  .field {
+    margin-bottom: 12px;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+    font-family: var(--mono);
+  }
+
+  input, textarea, select {
+    width: 100%;
+    background: #111;
+    border: 1px solid #2a2a2a;
+    color: var(--paper);
+    padding: 9px 12px;
+    font-family: var(--body);
+    font-size: 13px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #444;
+  }
+
+  select option { background: #111; }
+
+  textarea { resize: vertical; min-height: 60px; }
+
+  .row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* ── LINE ITEMS ── */
+  .items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .item-row {
+    display: grid;
+    grid-template-columns: 1fr 60px 70px 24px;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .item-row input {
+    font-size: 12px;
+    padding: 7px 10px;
+  }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    border-radius: 3px;
+    transition: color 0.2s;
+    line-height: 1;
+  }
+
+  .remove-btn:hover { color: var(--red); }
+
+  .add-item-btn {
+    background: #1a1a1a;
+    border: 1px dashed #333;
+    color: #666;
+    padding: 8px;
+    width: 100%;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .add-item-btn:hover {
+    border-color: #555;
+    color: #aaa;
+  }
+
+  /* ── ACTIONS ── */
+  .actions {
+    margin-top: auto;
+    padding-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn {
+    padding: 12px 20px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--display);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .btn-primary {
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  .btn-primary:hover {
+    background: #fff;
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid #333;
+    color: #888;
+  }
+
+  .btn-secondary:hover {
+    border-color: #666;
+    color: var(--paper);
+  }
+
+  /* ── PREVIEW ── */
+  .preview {
+    padding: 48px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    background: var(--cream);
+    overflow-y: auto;
+  }
+
+  .invoice-sheet {
+    background: white;
+    width: 100%;
+    max-width: 720px;
+    min-height: 900px;
+    box-shadow: 0 4px 40px rgba(0,0,0,0.12);
+    padding: 56px;
+    position: relative;
+    border-radius: 2px;
+  }
+
+  /* ── INVOICE HEADER ── */
+  .inv-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 48px;
+  }
+
+  .inv-brand {}
+
+  .inv-brand-name {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .inv-brand-tagline {
+    font-size: 11px;
+    color: #999;
+    font-family: var(--mono);
+  }
+
+  .inv-meta {
+    text-align: right;
+  }
+
+  .inv-number {
+    font-family: var(--display);
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .inv-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #bbb;
+    margin-bottom: 4px;
+  }
+
+  .inv-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-top: 8px;
+  }
+
+  .status-unpaid { background: #fef2f2; color: var(--red); border: 1px solid #fecaca; }
+  .status-paid { background: #f0fdf4; color: var(--green); border: 1px solid #bbf7d0; }
+  .status-draft { background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; }
+
+  /* ── DIVIDER ── */
+  .inv-divider {
+    height: 3px;
+    background: linear-gradient(to right, var(--ink) 60%, transparent);
+    margin-bottom: 36px;
+  }
+
+  /* ── FROM / TO ── */
+  .inv-parties {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-bottom: 40px;
+  }
+
+  .party-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #bbb;
+    margin-bottom: 10px;
+  }
+
+  .party-name {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .party-detail {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.6;
+    white-space: pre-line;
+  }
+
+  /* ── DATES ── */
+  .inv-dates {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    background: #f8f8f8;
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin-bottom: 32px;
+  }
+
+  .date-item {}
+
+  .date-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #aaa;
+    margin-bottom: 4px;
+  }
+
+  .date-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ── LINE ITEMS TABLE ── */
+  .inv-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+  }
+
+  .inv-table th {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #aaa;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .inv-table th:last-child,
+  .inv-table td:last-child { text-align: right; }
+
+  .inv-table td {
+    padding: 12px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+    vertical-align: top;
+  }
+
+  .inv-table tr:last-child td { border-bottom: none; }
+
+  .item-desc { font-weight: 500; color: var(--ink); }
+  .item-qty, .item-rate { font-family: var(--mono); color: #666; }
+  .item-amount { font-family: var(--mono); font-weight: 500; color: var(--ink); }
+
+  /* ── TOTALS ── */
+  .inv-totals {
+    margin-left: auto;
+    width: 260px;
+    margin-bottom: 40px;
+  }
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+  }
+
+  .total-row:last-child { border-bottom: none; }
+
+  .total-label { color: #888; font-family: var(--mono); font-size: 11px; }
+  .total-value { font-family: var(--mono); color: var(--ink); }
+
+  .total-grand {
+    background: var(--ink);
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .total-grand .total-label { color: #888; font-size: 10px; }
+  .total-grand .total-value {
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    font-family: var(--display);
+  }
+
+  /* ── NOTES / BANK ── */
+  .inv-footer-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #eee;
+    margin-bottom: 32px;
+  }
+
+  .inv-footer-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #bbb;
+    margin-bottom: 8px;
+  }
+
+  .inv-footer-text {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.6;
+    white-space: pre-line;
+  }
+
+  /* ── STAMP ── */
+  .inv-stamp {
+    position: absolute;
+    bottom: 56px;
+    right: 56px;
+    font-family: var(--display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #ddd;
+    border: 2px solid #ddd;
+    padding: 6px 14px;
+    border-radius: 2px;
+    transform: rotate(-8deg);
+  }
+
+  .inv-stamp.paid { color: #bbf7d0; border-color: #bbf7d0; }
+
+  /* ── CURRENCY SYMBOL ── */
+  .curr { font-size: 0.85em; vertical-align: top; margin-right: 1px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; }
+    .preview { padding: 24px 16px; }
+    .invoice-sheet { padding: 32px 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══════ SIDEBAR ══════ -->
+  <aside class="sidebar">
+    <div class="logo"><span>Afrensics</span> · Invoice</div>
+    <h2>Invoice<br>Generator</h2>
+
+    <!-- From -->
+    <div class="section">
+      <div class="section-label">Your Business</div>
+      <div class="field"><label>Business Name</label><input id="fromName" placeholder="Afrensics Limited" value="Afrensics Limited"></div>
+      <div class="field"><label>Email</label><input id="fromEmail" placeholder="info@aedisecurity.com" value="info@aedisecurity.com"></div>
+      <div class="field"><label>Phone</label><input id="fromPhone" placeholder="+254 708 759 251" value="+254 708 759 251"></div>
+      <div class="field"><label>Address</label><textarea id="fromAddress" placeholder="Nairobi, Kenya">Nairobi, Kenya</textarea></div>
+    </div>
+
+    <!-- To -->
+    <div class="section">
+      <div class="section-label">Bill To</div>
+      <div class="field"><label>Client Name</label><input id="toName" placeholder="Client Name"></div>
+      <div class="field"><label>Email</label><input id="toEmail" placeholder="client@email.com"></div>
+      <div class="field"><label>Phone</label><input id="toPhone" placeholder="+254..."></div>
+      <div class="field"><label>Address</label><textarea id="toAddress" placeholder="Client address..."></textarea></div>
+    </div>
+
+    <!-- Invoice Details -->
+    <div class="section">
+      <div class="section-label">Invoice Details</div>
+      <div class="row2">
+        <div class="field"><label>Invoice #</label><input id="invNumber" placeholder="INV-001" value="INV-001"></div>
+        <div class="field">
+          <label>Status</label>
+          <select id="invStatus">
+            <option value="draft">Draft</option>
+            <option value="unpaid" selected>Unpaid</option>
+            <option value="paid">Paid</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Issue Date</label><input type="date" id="issueDate"></div>
+        <div class="field"><label>Due Date</label><input type="date" id="dueDate"></div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Currency</label>
+          <select id="currency">
+            <option value="KES">KES — Kenya Shilling</option>
+            <option value="USD">USD — US Dollar</option>
+            <option value="NGN">NGN — Nigerian Naira</option>
+            <option value="GHS">GHS — Ghana Cedi</option>
+            <option value="ZAR">ZAR — South African Rand</option>
+            <option value="GBP">GBP — British Pound</option>
+            <option value="EUR">EUR — Euro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tax %</label>
+          <input type="number" id="taxRate" placeholder="0" value="16" min="0" max="100">
+        </div>
+      </div>
+    </div>
+
+    <!-- Line Items -->
+    <div class="section">
+      <div class="section-label">Line Items</div>
+      <div class="items-list" id="itemsList"></div>
+      <button class="add-item-btn" onclick="addItem()">+ Add Line Item</button>
+    </div>
+
+    <!-- Notes & Bank -->
+    <div class="section">
+      <div class="section-label">Notes & Payment Info</div>
+      <div class="field"><label>Notes</label><textarea id="invNotes" placeholder="Payment terms, thank you message...">Thank you for choosing Afrensics. Payment due within 7 days.</textarea></div>
+      <div class="field"><label>Payment Details / Bank Info</label><textarea id="bankDetails" placeholder="M-Pesa: 0708759251&#10;Bank: ...">M-Pesa: Till/Paybill details here
+Bank: Account details here</textarea></div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" onclick="downloadPDF()">↓ Download PDF</button>
+      <button class="btn btn-secondary" onclick="clearAll()">Reset Form</button>
+    </div>
+  </aside>
+
+  <!-- ══════ PREVIEW ══════ -->
+  <main class="preview">
+    <div class="invoice-sheet" id="invoiceSheet">
+
+      <div class="inv-header">
+        <div class="inv-brand">
+          <div class="inv-brand-name" id="previewFromName">Afrensics Limited</div>
+          <div class="inv-brand-tagline" id="previewFromEmail">info@aedisecurity.com</div>
+        </div>
+        <div class="inv-meta">
+          <div class="inv-label">Invoice</div>
+          <div class="inv-number" id="previewNumber">INV-001</div>
+          <div><span class="inv-status status-unpaid" id="previewStatus">UNPAID</span></div>
+        </div>
+      </div>
+
+      <div class="inv-divider"></div>
+
+      <div class="inv-parties">
+        <div>
+          <div class="party-label">From</div>
+          <div class="party-name" id="previewFromName2">Afrensics Limited</div>
+          <div class="party-detail" id="previewFromDetail"></div>
+        </div>
+        <div>
+          <div class="party-label">Bill To</div>
+          <div class="party-name" id="previewToName">—</div>
+          <div class="party-detail" id="previewToDetail"></div>
+        </div>
+      </div>
+
+      <div class="inv-dates">
+        <div class="date-item">
+          <div class="date-label">Issue Date</div>
+          <div class="date-value" id="previewIssueDate">—</div>
+        </div>
+        <div class="date-item">
+          <div class="date-label">Due Date</div>
+          <div class="date-value" id="previewDueDate">—</div>
+        </div>
+        <div class="date-item">
+          <div class="date-label">Currency</div>
+          <div class="date-value" id="previewCurrency">KES</div>
+        </div>
+      </div>
+
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Rate</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody id="previewItems"></tbody>
+      </table>
+
+      <div class="inv-totals">
+        <div class="total-row">
+          <span class="total-label">Subtotal</span>
+          <span class="total-value" id="previewSubtotal">0.00</span>
+        </div>
+        <div class="total-row">
+          <span class="total-label" id="taxLabel">Tax (16%)</span>
+          <span class="total-value" id="previewTax">0.00</span>
+        </div>
+        <div class="total-grand">
+          <span class="total-label">Total Due</span>
+          <span class="total-value" id="previewTotal">0.00</span>
+        </div>
+      </div>
+
+      <div class="inv-footer-sections">
+        <div>
+          <div class="inv-footer-label">Notes</div>
+          <div class="inv-footer-text" id="previewNotes">Thank you for choosing Afrensics. Payment due within 7 days.</div>
+        </div>
+        <div>
+          <div class="inv-footer-label">Payment Details</div>
+          <div class="inv-footer-text" id="previewBank"></div>
+        </div>
+      </div>
+
+      <div class="inv-stamp" id="previewStamp">Draft</div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────
+let items = [
+  { desc: 'BiloHub Growth Plan — Month 1', qty: 1, rate: 6899 },
+  { desc: 'Setup Fee', qty: 1, rate: 12500 }
+];
+
+const currSymbols = {
+  KES: 'KES ', USD: '$', NGN: '₦', GHS: '₵', ZAR: 'R', GBP: '£', EUR: '€'
+};
+
+// Set default dates
+const today = new Date();
+const due = new Date(today);
+due.setDate(due.getDate() + 7);
+document.getElementById('issueDate').value = today.toISOString().split('T')[0];
+document.getElementById('dueDate').value = due.toISOString().split('T')[0];
+
+// ── Render sidebar items ──────────────────────────────
+function renderItems() {
+  const list = document.getElementById('itemsList');
+  list.innerHTML = items.map((item, i) => `
+    <div class="item-row">
+      <input placeholder="Description" value="${item.desc}" oninput="items[${i}].desc=this.value;updatePreview()" />
+      <input type="number" placeholder="Qty" value="${item.qty}" min="1" oninput="items[${i}].qty=parseFloat(this.value)||0;updatePreview()" />
+      <input type="number" placeholder="Rate" value="${item.rate}" min="0" oninput="items[${i}].rate=parseFloat(this.value)||0;updatePreview()" />
+      <button class="remove-btn" onclick="removeItem(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function addItem() {
+  items.push({ desc: '', qty: 1, rate: 0 });
+  renderItems();
+  updatePreview();
+}
+
+function removeItem(i) {
+  items.splice(i, 1);
+  renderItems();
+  updatePreview();
+}
+
+// ── Format number ─────────────────────────────────────
+function fmt(n) {
+  return n.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y, m, day] = d.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(day)} ${months[parseInt(m)-1]} ${y}`;
+}
+
+// ── Update preview ────────────────────────────────────
+function updatePreview() {
+  const fromName = document.getElementById('fromName').value || 'Your Business';
+  const fromEmail = document.getElementById('fromEmail').value;
+  const fromPhone = document.getElementById('fromPhone').value;
+  const fromAddr = document.getElementById('fromAddress').value;
+  const toName = document.getElementById('toName').value || '—';
+  const toEmail = document.getElementById('toEmail').value;
+  const toPhone = document.getElementById('toPhone').value;
+  const toAddr = document.getElementById('toAddress').value;
+  const num = document.getElementById('invNumber').value || 'INV-001';
+  const status = document.getElementById('invStatus').value;
+  const issue = document.getElementById('issueDate').value;
+  const dueD = document.getElementById('dueDate').value;
+  const curr = document.getElementById('currency').value;
+  const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+  const notes = document.getElementById('invNotes').value;
+  const bank = document.getElementById('bankDetails').value;
+  const sym = currSymbols[curr] || curr + ' ';
+
+  // Header
+  document.getElementById('previewFromName').textContent = fromName;
+  document.getElementById('previewFromName2').textContent = fromName;
+  document.getElementById('previewFromEmail').textContent = fromEmail;
+  document.getElementById('previewNumber').textContent = num;
+  document.getElementById('previewFromDetail').textContent =
+    [fromPhone, fromAddr].filter(Boolean).join('\n');
+  document.getElementById('previewToName').textContent = toName;
+  document.getElementById('previewToDetail').textContent =
+    [toEmail, toPhone, toAddr].filter(Boolean).join('\n');
+  document.getElementById('previewIssueDate').textContent = fmtDate(issue);
+  document.getElementById('previewDueDate').textContent = fmtDate(dueD);
+  document.getElementById('previewCurrency').textContent = curr;
+  document.getElementById('previewNotes').textContent = notes;
+  document.getElementById('previewBank').textContent = bank;
+
+  // Status
+  const statusEl = document.getElementById('previewStatus');
+  statusEl.className = 'inv-status status-' + status;
+  statusEl.textContent = status.toUpperCase();
+
+  // Stamp
+  const stamp = document.getElementById('previewStamp');
+  stamp.textContent = status === 'paid' ? 'PAID' : status === 'draft' ? 'DRAFT' : '';
+  stamp.className = 'inv-stamp' + (status === 'paid' ? ' paid' : '');
+
+  // Items
+  const tbody = document.getElementById('previewItems');
+  let subtotal = 0;
+  tbody.innerHTML = items.map(item => {
+    const amount = (item.qty || 0) * (item.rate || 0);
+    subtotal += amount;
+    return `
+      <tr>
+        <td class="item-desc">${item.desc || '—'}</td>
+        <td class="item-qty">${item.qty}</td>
+        <td class="item-rate">${sym}${fmt(item.rate)}</td>
+        <td class="item-amount">${sym}${fmt(amount)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const tax = subtotal * (taxRate / 100);
+  const total = subtotal + tax;
+
+  document.getElementById('previewSubtotal').textContent = sym + fmt(subtotal);
+  document.getElementById('taxLabel').textContent = `Tax (${taxRate}%)`;
+  document.getElementById('previewTax').textContent = sym + fmt(tax);
+  document.getElementById('previewTotal').textContent = sym + fmt(total);
+}
+
+// ── Bind all inputs ───────────────────────────────────
+document.querySelectorAll('input, textarea, select').forEach(el => {
+  el.addEventListener('input', updatePreview);
+});
+
+// ── Clear all ─────────────────────────────────────────
+function clearAll() {
+  document.getElementById('toName').value = '';
+  document.getElementById('toEmail').value = '';
+  document.getElementById('toPhone').value = '';
+  document.getElementById('toAddress').value = '';
+  document.getElementById('invNumber').value = 'INV-001';
+  document.getElementById('invStatus').value = 'unpaid';
+  items = [{ desc: '', qty: 1, rate: 0 }];
+  renderItems();
+  updatePreview();
+}
+
+// ── Download PDF ──────────────────────────────────────
+function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  const fromName = document.getElementById('fromName').value || 'Your Business';
+  const fromEmail = document.getElementById('fromEmail').value;
+  const fromPhone = document.getElementById('fromPhone').value;
+  const fromAddr = document.getElementById('fromAddress').value;
+  const toName = document.getElementById('toName').value || '—';
+  const toEmail = document.getElementById('toEmail').value;
+  const toPhone = document.getElementById('toPhone').value;
+  const toAddr = document.getElementById('toAddress').value;
+  const num = document.getElementById('invNumber').value || 'INV-001';
+  const status = document.getElementById('invStatus').value;
+  const issue = document.getElementById('issueDate').value;
+  const dueD = document.getElementById('dueDate').value;
+  const curr = document.getElementById('currency').value;
+  const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+  const notes = document.getElementById('invNotes').value;
+  const bank = document.getElementById('bankDetails').value;
+  const sym = currSymbols[curr] || curr + ' ';
+
+  const W = 210, margin = 20;
+
+  // Background
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, W, 297, 'F');
+
+  // Header bar
+  doc.setFillColor(10, 10, 15);
+  doc.rect(0, 0, W, 28, 'F');
+
+  // Business name
+  doc.setTextColor(247, 245, 240);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text(fromName, margin, 18);
+
+  // Invoice label + number
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(150, 150, 150);
+  doc.text('INVOICE', W - margin, 12, { align: 'right' });
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(247, 245, 240);
+  doc.text(num, W - margin, 22, { align: 'right' });
+
+  // Accent line
+  doc.setFillColor(26, 58, 92);
+  doc.rect(0, 28, W, 3, 'F');
+
+  let y = 44;
+
+  // From / To
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(170, 170, 170);
+  doc.text('FROM', margin, y);
+  doc.text('BILL TO', W / 2 + 4, y);
+
+  y += 6;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(10, 10, 15);
+  doc.text(fromName, margin, y);
+  doc.text(toName, W / 2 + 4, y);
+
+  y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  const fromLines = [fromEmail, fromPhone, fromAddr].filter(Boolean);
+  const toLines = [toEmail, toPhone, toAddr].filter(Boolean);
+  const maxLines = Math.max(fromLines.length, toLines.length);
+  for (let i = 0; i < maxLines; i++) {
+    if (fromLines[i]) doc.text(fromLines[i], margin, y);
+    if (toLines[i]) doc.text(toLines[i], W / 2 + 4, y);
+    y += 5;
+  }
+
+  y += 8;
+
+  // Dates bar
+  doc.setFillColor(248, 248, 248);
+  doc.rect(margin, y, W - margin * 2, 14, 'F');
+  doc.setFontSize(8);
+  doc.setTextColor(170, 170, 170);
+  doc.text('ISSUE DATE', margin + 4, y + 5);
+  doc.text('DUE DATE', margin + 56, y + 5);
+  doc.text('CURRENCY', margin + 112, y + 5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(10, 10, 15);
+  doc.setFontSize(9);
+  doc.text(fmtDate(issue), margin + 4, y + 11);
+  doc.text(fmtDate(dueD), margin + 56, y + 11);
+  doc.text(curr, margin + 112, y + 11);
+
+  y += 22;
+
+  // Table header
+  doc.setFillColor(10, 10, 15);
+  doc.rect(margin, y, W - margin * 2, 8, 'F');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(170, 170, 170);
+  doc.text('DESCRIPTION', margin + 3, y + 5.5);
+  doc.text('QTY', margin + 90, y + 5.5);
+  doc.text('RATE', margin + 108, y + 5.5);
+  doc.text('AMOUNT', W - margin - 3, y + 5.5, { align: 'right' });
+
+  y += 8;
+
+  let subtotal = 0;
+  items.forEach((item, idx) => {
+    const amount = (item.qty || 0) * (item.rate || 0);
+    subtotal += amount;
+    if (idx % 2 === 1) {
+      doc.setFillColor(250, 250, 250);
+      doc.rect(margin, y, W - margin * 2, 8, 'F');
+    }
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(50, 50, 50);
+    doc.text(item.desc || '—', margin + 3, y + 5.5);
+    doc.text(String(item.qty), margin + 90, y + 5.5);
+    doc.text(sym + fmt(item.rate), margin + 105, y + 5.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(10, 10, 15);
+    doc.text(sym + fmt(amount), W - margin - 3, y + 5.5, { align: 'right' });
+    y += 8;
+  });
+
+  y += 6;
+
+  // Totals
+  const tax = subtotal * (taxRate / 100);
+  const total = subtotal + tax;
+  const totX = W - margin - 60;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(140, 140, 140);
+  doc.text('Subtotal', totX, y);
+  doc.setTextColor(10, 10, 15);
+  doc.text(sym + fmt(subtotal), W - margin, y, { align: 'right' });
+  y += 7;
+  doc.setTextColor(140, 140, 140);
+  doc.text(`Tax (${taxRate}%)`, totX, y);
+  doc.setTextColor(10, 10, 15);
+  doc.text(sym + fmt(tax), W - margin, y, { align: 'right' });
+  y += 4;
+
+  doc.setFillColor(10, 10, 15);
+  doc.rect(totX - 4, y, W - margin - totX + 4, 12, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(255, 255, 255);
+  doc.text('TOTAL DUE', totX, y + 8);
+  doc.text(sym + fmt(total), W - margin - 3, y + 8, { align: 'right' });
+
+  y += 20;
+
+  // Status stamp
+  const stampText = status === 'paid' ? 'PAID' : status === 'draft' ? 'DRAFT' : 'UNPAID';
+  const stampColor = status === 'paid' ? [22, 163, 74] : status === 'draft' ? [148, 163, 184] : [220, 38, 38];
+  doc.setDrawColor(...stampColor);
+  doc.setLineWidth(1.5);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...stampColor);
+  doc.saveGraphicsState();
+  doc.text(stampText, W - margin - 10, y - 10, { align: 'right', angle: 10 });
+  doc.restoreGraphicsState();
+
+  // Notes + Bank
+  if (notes || bank) {
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, W - margin, y);
+    y += 8;
+
+    if (notes) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(170, 170, 170);
+      doc.text('NOTES', margin, y);
+      y += 5;
+      doc.setTextColor(80, 80, 80);
+      const noteLines = doc.splitTextToSize(notes, (W - margin * 2) / 2 - 4);
+      doc.text(noteLines, margin, y);
+    }
+
+    if (bank) {
+      const bx = W / 2 + 4;
+      const by = y - 5;
+      doc.setFontSize(8);
+      doc.setTextColor(170, 170, 170);
+      doc.text('PAYMENT DETAILS', bx, by);
+      doc.setTextColor(80, 80, 80);
+      const bankLines = doc.splitTextToSize(bank, (W - margin * 2) / 2 - 4);
+      doc.text(bankLines, bx, by + 5);
+    }
+  }
+
+  // Footer
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(200, 200, 200);
+  doc.text(`Generated by Afrensics Invoice Generator · ${fromEmail}`, W / 2, 287, { align: 'center' });
+
+  doc.save(`Invoice-${num}.pdf`);
+}
+
+// ── Init ──────────────────────────────────────────────
+renderItems();
+updatePreview();
+</script>
+</body>
+</html>
